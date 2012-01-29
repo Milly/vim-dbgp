@@ -597,7 +597,7 @@ class DebugUI:
 
 class DbgProtocol:
   """ DBGp Procotol class """
-  def __init__(self, port = 9000, proxy_host = 'localhost', proxy_port = None, proxy_key = None):
+  def __init__(self, port = 9000, proxy_host = 'localhost', proxy_port = None, proxy_key = None, timeout = 5):
     self.port = port
     self.proxy_host = proxy_host
     self.proxy_port = proxy_port
@@ -605,6 +605,7 @@ class DbgProtocol:
     self.sock = None
     self.isconned = 0
     self.proxy_isconned = False
+    self.timeout = timeout
 
   def isconnected(self):
     return self.isconned
@@ -612,8 +613,8 @@ class DbgProtocol:
   def accept(self):
     if self.proxy_port:
       self.proxy_init()
+    print 'waiting for a new connection on port %s for %s seconds...' % (self.port, self.timeout)
     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print 'waiting for a new connection on port %s for %s seconds...' % (self.port, int(serv.gettimeout()))
     try:
       serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
       serv.bind(('', self.port))
@@ -780,7 +781,7 @@ class Debugger:
     self.max_data      = max_data
     self.max_depth     = max_depth
 
-    self.protocol   = DbgProtocol(self.port, self.proxy_host, self.proxy_port, self.proxy_key)
+    self.protocol   = DbgProtocol(self.port, self.proxy_host, self.proxy_port, self.proxy_key, timeout)
 
     self.ui         = DebugUI(self, dedicatedtab, minibufexpl)
     self.breakpt    = BreakPoint()
