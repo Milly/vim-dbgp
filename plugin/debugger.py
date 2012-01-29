@@ -30,6 +30,7 @@
 #    Jaime Soriano Pastor <jsoriano <at> tuenti.com>
 #    Seung Woo Shin <segv <at> sayclub.com>
 #    Sam Ghods <sam <at> box.net>
+#    Hadi Zeftin <slack.dna <at> gmail.com>
 
 """
 	debugger.py -- DBGp client: a remote debugger interface to DBGp protocol
@@ -56,6 +57,7 @@ import socket
 import base64
 import traceback
 import xml.dom.minidom
+import urllib
 
 #######################################################################################################################
 #                                                                                                                     #
@@ -132,18 +134,21 @@ import xml.dom.minidom
 
 class VimWindow:
   """ wrapper class of window of vim """
-  def __init__(self, name = 'DEBUG_WINDOW'):
+  def __init__(self, owner, name = 'DEBUG_WINDOW'):
     """ initialize """
     self.name       = name
     self.buffer     = None
     self.firstwrite = 1
+    self.owner = owner
+
   def isprepared(self):
     """ check window is OK """
     if self.buffer == None or len(dir(self.buffer)) == 0 or self.getwinnr() == -1:
       return 0
     return 1
   def prepare(self):
-    """ check window is OK, if not then create """
+    """ check window is OK (switch to working tab first), if not then create """
+    self.owner.switch_working_tab()
     if not self.isprepared():
       self.create()
   def on_create(self):
@@ -282,8 +287,8 @@ class VimWindow:
     self.write(self.xml_stringfy_childs(xml))
 
 class StackWindow(VimWindow):
-  def __init__(self, name = 'STACK_WINDOW'):
-    VimWindow.__init__(self, name)
+  def __init__(self, owner, name = 'STACK_WINDOW'):
+    VimWindow.__init__(self, owner, name)
   def xml_on_element(self, node):
     if node.nodeName != 'stack':
       return VimWindow.xml_on_element(self, node)
@@ -304,16 +309,9 @@ class StackWindow(VimWindow):
     self.command('syntax clear')
     self.command('syntax region CurStack start="^' +str(no)+ ' " end="$"')
 
-class LogWindow(VimWindow):
-  def __init__(self, name = 'LOG___WINDOW'):
-    VimWindow.__init__(self, name)
-  def on_create(self):
-    self.command('set nowrap fdm=marker fmr={{{,}}} fdl=0')
-    self.write('asdfasdf')
-
 class TraceWindow(VimWindow):
-  def __init__(self, name = 'TRACE_WINDOW'):
-    VimWindow.__init__(self, name)
+  def __init__(self, owner, name = 'TRACE_WINDOW'):
+    VimWindow.__init__(self, owner, name)
   def xml_on_element(self, node):
     if node.nodeName != 'error':
       return VimWindow.xml_on_element(self, node)
@@ -326,8 +324,8 @@ class TraceWindow(VimWindow):
     self.command('set nowrap fdm=marker fmr={{{,}}} fdl=0')
 
 class WatchWindow(VimWindow):
-  def __init__(self, name = 'WATCH_WINDOW'):
-    VimWindow.__init__(self, name)
+  def __init__(self, owner, name = 'WATCH_WINDOW'):
+    VimWindow.__init__(self, owner, name)
   def fixup_single(self, line, node, level):
     return ''.ljust(level*1) + line + '\n'
   def fixup_childs(self, line, node, level):
@@ -410,8 +408,8 @@ class WatchWindow(VimWindow):
       return ('none', '')
 
 class HelpWindow(VimWindow):
-  def __init__(self, name = 'HELP__WINDOW'):
-    VimWindow.__init__(self, name)
+  def __init__(self, owner, name = 'HELP__WINDOW'):
+    VimWindow.__init__(self, owner, name)
   def on_create(self):
     self.write(                                                          \
         '[ Function Keys ]                 |                       \n' + \
@@ -429,12 +427,13 @@ class HelpWindow(VimWindow):
 
 class DebugUI:
   """ DEBUGUI class """
-  def __init__(self, minibufexpl = 0):
+  def __init__(self, debugger, dedicatedtab, minibufexpl = 0):
     """ initialize object """
-    self.watchwin = WatchWindow()
-    self.stackwin = StackWindow()
-    self.tracewin = TraceWindow()
-    self.helpwin  = HelpWindow('HELP__WINDOW')
+    self.debugger = debugger
+    self.watchwin = WatchWindow(self)
+    self.stackwin = StackWindow(self)
+    self.tracewin = TraceWindow(self)
+    self.helpwin  = HelpWindow(self, 'HELP__WINDOW')
     self.mode     = 0 # normal mode
     self.file     = None
     self.line     = None
@@ -442,6 +441,16 @@ class DebugUI:
     self.cursign  = None
     self.sessfile = "/tmp/debugger_vim_saved_session." + str(os.getpid())
     self.minibufexpl = minibufexpl
+    # tab stuff
+    self.dedicatedtab = dedicatedtab
+    self.origintab = 0
+    self.debugtab = 0
+    self.usetab = 0
+    self.usesessiontab = 0
+
+  def switch_working_tab(self):
+    if self.usetab == 1 and vim.eval('tabpagenr()') != self.debugtab:
+      vim.command('tabn ' + self.debugtab)
 
   def debug_mode(self):
     """ change mode to debug """
@@ -450,12 +459,14 @@ class DebugUI:
     self.mode = 1
     if self.minibufexpl == 1:
       vim.command('CMiniBufExplorer')         # close minibufexplorer if it is open
-    # save session
-    vim.command('mksession! ' + self.sessfile)
-    for i in range(1, len(vim.windows)+1):
-      vim.command(str(i)+'wincmd w')
-      self.winbuf[i] = vim.eval('bufnr("%")') # save buffer number, mksession does not do job perfectly
-                                              # when buffer is not saved at all.
+
+    if self.dedicatedtab:
+      self.usetab = 1
+      self.origintab = vim.eval('tabpagenr()')
+      vim.command("tabnew")
+      self.debugtab = vim.eval('tabpagenr()')    # save current tab-page number
+    else:
+      self.store_session()
 
     vim.command('silent topleft new')                # create srcview window (winnr=1)
     for i in range(2, len(vim.windows)+1):
@@ -466,6 +477,23 @@ class DebugUI:
     self.cursign = '1'
 
     self.set_highlight()
+
+  def store_session(self):
+    if vim.eval("tabpagenr('$')") > 1:
+      self.usetab = 1
+      self.debugtab = vim.eval('tabpagenr()')    # save current tab-page number
+      if vim.eval('&sessionoptions').find('tabpages') != -1:
+          self.usesessiontab = 1
+          vim.command('set sessionoptions-=tabpages') # if there are tabpages in sessionoptions, remove it
+                                                      # so the tab-pages wont be doubled next-time we sourced it:
+      else:
+        self.usesessiontab = 0
+
+      vim.command('mksession! ' + self.sessfile)# save session
+      for i in range(1, len(vim.windows)+1):
+        vim.command(str(i)+'wincmd w')
+        self.winbuf[i] = vim.eval('bufnr("%")') # save buffer number, mksession does not do job perfectly
+                                                # when buffer is not saved at all.
 
   def normal_mode(self):
     """ restore mode to normal """
@@ -478,28 +506,38 @@ class DebugUI:
     # destory all created windows
     self.destroy()
 
-    # restore session
-    vim.command('source ' + self.sessfile)
-    os.system('rm -f ' + self.sessfile)
+    # go to the initial tab
+    self.switch_working_tab()
+
+    if self.dedicatedtab: # if using dedicated tab, just delete it
+      vim.command("tabclose")
+      vim.command("tabn " + self.origintab)
+    else:
+      self.restore_session()
 
     self.set_highlight()
-
-
-    self.winbuf.clear()
     self.file    = None
     self.line    = None
     self.mode    = 0
     self.cursign = None
 
+  def restore_session(self):
+    vim.command('source ' + self.sessfile)
+    os.system('rm -f ' + self.sessfile)
+    # restore sessionoptions
+    if self.usesessiontab == 1:
+      vim.command('set sessionoptions+=tabpages')
+    self.winbuf.clear()
     if self.minibufexpl == 1:
-      vim.command('MiniBufExplorer')         # close minibufexplorer if it is open
+      vim.command('MiniBufExplorer')         # restore minibufexplorer
 
   def create(self):
     """ create windows """
     self.watchwin.create('vertical belowright new')
     self.helpwin.create('belowright new')
     self.stackwin.create('belowright new')
-    self.tracewin.create('belowright new')
+    if self.debugger.debug:
+        self.tracewin.create('belowright new')
 
   def set_highlight(self):
     """ set vim highlight of debugger sign """
@@ -511,7 +549,8 @@ class DebugUI:
     self.helpwin.destroy()
     self.watchwin.destroy()
     self.stackwin.destroy()
-    self.tracewin.destroy()
+    if self.debugger.debug:
+      self.tracewin.destroy()
   def go_srcview(self):
     vim.command('1wincmd w')
   def next_sign(self):
@@ -524,6 +563,11 @@ class DebugUI:
     """ set srcview windows to file:line and replace current sign """
     if file == self.file and self.line == line:
       return
+
+    # there are bug with path string in Windows system, so if this is Windows, remove the initial '/'
+    file = urllib.unquote(file)
+    if os.name == 'nt' and file[0] == "/":
+      file = file[1:]
 
     nextsign = self.next_sign()
 
@@ -540,6 +584,16 @@ class DebugUI:
 
     self.line    = line
     self.cursign = nextsign
+  def trace(self, msg, xml = 0):
+    if self.debugger.debug:
+      try:
+        if xml:
+          self.tracewin.write_xml_childs(msg)
+        else:
+          self.tracewin.write(msg)
+      except:
+        print "Unknown error while logging"
+
 
 class DbgProtocol:
   """ DBGp Procotol class """
@@ -558,20 +612,16 @@ class DbgProtocol:
   def accept(self):
     if self.proxy_port:
       self.proxy_init()
-    print 'waiting for a new connection on port %d for 10 seconds...' % self.port
     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print 'waiting for a new connection on port %s for %s seconds...' % (self.port, int(serv.gettimeout()))
     try:
       serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
       serv.bind(('', self.port))
       serv.listen(10)
       (self.sock, address) = serv.accept()
     except socket.timeout:
-      global debugger
       serv.close()
-      self.proxy_stop()
-      debugger.stop()
-      print 'timeout'
-      return
+      raise ConnectionTimeoutException
 
     print 'connection from %s:%s' % address
     self.isconned = 1
@@ -706,9 +756,9 @@ class Debugger:
   #################################################################################################################
   # Internal functions
   #
-  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_host='localhost', proxy_port=None, proxy_key=None):
+  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_host='localhost', proxy_port=None, proxy_key=None, timeout = 5, dedicatedtab = 1):
     """ initialize Debugger """
-    socket.setdefaulttimeout(5)
+    socket.setdefaulttimeout(timeout)
     self.port       = port
     self.proxy_host = proxy_host
     self.proxy_port = proxy_port
@@ -732,7 +782,7 @@ class Debugger:
 
     self.protocol   = DbgProtocol(self.port, self.proxy_host, self.proxy_port, self.proxy_key)
 
-    self.ui         = DebugUI(minibufexpl)
+    self.ui         = DebugUI(self, dedicatedtab, minibufexpl)
     self.breakpt    = BreakPoint()
 
     self.file_mapping = list(vim.eval('debuggerFileMapping'))
@@ -754,6 +804,7 @@ class Debugger:
        return file
 
   def clear(self):
+    self.status    = None
     self.current   = None
     self.lasterror = None
     self.msgid     = 0
@@ -769,8 +820,7 @@ class Debugger:
     """ send message """
     self.protocol.send_msg(msg)
     # log message
-    if self.debug:
-      self.ui.tracewin.write(str(self.msgid) + ' : send =====> ' + msg)
+    self.ui.trace(str(self.msgid) + ' : send =====> ' + msg)
 
   def recv(self, count=10000):
     """ receive message until response is last transaction id or received count's message """
@@ -780,9 +830,8 @@ class Debugger:
       txt = self.protocol.recv_msg()
       res = xml.dom.minidom.parseString(txt)
       # log messages {{{
-      if self.debug:
-        self.ui.tracewin.write( str(self.msgid) + ' : recv <===== {{{   ' + txt)
-        self.ui.tracewin.write('}}}')
+      self.ui.trace( str(self.msgid) + ' : recv <===== {{{   ' + txt)
+      self.ui.trace('}}}')
       # handle message
       self.handle_msg(res)
       # exit, if response's transaction id == last transaction id
@@ -816,7 +865,7 @@ class Debugger:
       handler = getattr(self, 'handle_' + fc.tagName)
       handler(res)
     except AttributeError:
-      print 'Debugger.handle_'+fc.tagName+'() not found, please see the LOG___WINDOW'
+      print 'Debugger.handle_'+fc.tagName+'() not found, please see the TRACE_WINDOW'
     self.ui.go_srcview()
   def handle_response(self, res):
     """ call appropraite response message handler member function, handle_response_XXX() """
@@ -859,7 +908,7 @@ class Debugger:
 
   def handle_response_error(self, res):
     """ handle <error> tag """
-    self.ui.tracewin.write_xml_childs(res)
+    self.ui.trace(res, 1)
 #    print 'ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 #    print res.toprettyxml()
 #    print '------------------------------------'
@@ -977,9 +1026,13 @@ class Debugger:
 
   def command(self, cmd, arg1 = '', arg2 = ''):
     """ general command sender (receive response too) """
-    if self.running == 0:
-      print "Not connected\n"
+    if self.status == 'stopping':
+      self.quit()
       return
+
+    if self.running == 0:
+      raise NotRunningException
+
     msgid = self.send_command(cmd, arg1, arg2)
     self.recv()
     return msgid
@@ -988,8 +1041,7 @@ class Debugger:
     """ start debugger or continue """
     if self.protocol.isconnected():
       self.command('run')
-      if self.status != 'stopped':
-        self.command('stack_get')
+      self.command('stack_get')
     else:
       self.clear()
       self.protocol.accept()
@@ -1020,14 +1072,22 @@ class Debugger:
       self.ui.go_srcview()
 
   def quit(self):
+    #print "Debugger is stopping\n"
+    if self.running == 0:
+      raise NotRunningException
+
     self.ui.normal_mode()
     self.clear()
     #vim.command('MiniBufExplorer')
 
   def stop(self):
+    #if self.running == 0:
+      #raise NotRunningException
     self.clear()
 
   def up(self):
+    if self.running == 0:
+      raise NotRunningException
     if self.curstack > 0:
       self.curstack -= 1
       self.ui.stackwin.highlight_stack(self.curstack)
@@ -1035,6 +1095,8 @@ class Debugger:
       self.ui.set_srcview(file, self.stacks[self.curstack]['line'])
 
   def down(self):
+    if self.running == 0:
+      raise NotRunningException
     if self.curstack < self.laststack:
       self.curstack += 1
       self.ui.stackwin.highlight_stack(self.curstack)
@@ -1064,9 +1126,13 @@ class Debugger:
         self.recv()
 
   def watch_input(self, mode, arg = ''):
+    if self.running == 0:
+      raise NotRunningException
     self.ui.watchwin.input(mode, arg)
 
   def property_get(self, name = ''):
+    if self.running == 0:
+      raise NotRunningException
     if name == '':
       name = vim.eval('expand("<cword>")')
     self.ui.watchwin.write('--> property_get: '+name)
@@ -1074,6 +1140,8 @@ class Debugger:
     
   def watch_execute(self):
     """ execute command in watch window """
+    if self.running == 0:
+      raise NotRunningException
     (cmd, expr) = self.ui.watchwin.get_command()
     if cmd == 'exec':
       self.command('exec', '', expr)
@@ -1095,13 +1163,27 @@ class Debugger:
   #
   #################################################################################################################
 
+class DebuggerException(Exception):
+  pass
 
+class NotRunningException(DebuggerException):
+  pass
+
+class ConnectionTimeoutException(DebuggerException):
+  pass
 
 #################################################################################################################
 #
 # Try - Catch Wrapper 
 #
 #################################################################################################################
+
+def unknown_exception_handler(msg = 'Unknown Exception, Connection closed, stop debugging\n'):
+    debugger.ui.trace(sys.exc_info())
+    debugger.ui.trace("".join(traceback.format_tb( sys.exc_info()[2])))
+    debugger.stop()
+    print msg, sys.exc_info()
+
 
 def debugger_init(debug = 0):
   global debugger
@@ -1136,8 +1218,16 @@ def debugger_init(debug = 0):
   if minibufexpl == 0:
     minibufexpl = 0
 
+  timeout = int(vim.eval('debuggerTimeout'))
+  if timeout == 0:
+    timeout = 5
+
+  dedicatedtab = int(vim.eval('debuggerDedicatedTab'))
+
+  debug = int(vim.eval('debuggerDebugMode'))
+
   debugger = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug,
-    proxy_host, proxy_port, proxy_key)
+    proxy_host, proxy_port, proxy_key, timeout, dedicatedtab)
 
 def connection_closed(exc_info):
   debugger.ui.tracewin.write(exc_info)
@@ -1148,58 +1238,78 @@ def connection_closed(exc_info):
 def debugger_command(msg, arg1 = '', arg2 = ''):
   try:
     debugger.command(msg, arg1, arg2)
-    if debugger.status != 'stopped':
-      debugger.command('stack_get')
+    debugger.command('stack_get')
+  except NotRunningException:
+    print "Debugger is not running\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_run():
   try:
     debugger.run()
+  except NotRunningException:
+    print "Debugger is not running\n"
+  except ConnectionTimeoutException:
+    print "Connection Timeout\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_watch_input(cmd, arg = ''):
   try:
     if arg == '<cword>':
       arg = vim.eval('expand("<cword>")')
     debugger.watch_input(cmd, arg)
+  except NotRunningException:
+    print "Debugger is not running\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_context():
   try:
     debugger.command('context_get')
+  except NotRunningException:
+    print "Debugger is not running\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_property(name = ''):
   try:
     debugger.property_get()
+  except NotRunningException:
+    print "Debugger is not running\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_mark(exp = ''):
   try:
     debugger.mark(exp)
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_up():
   try:
     debugger.up()
+  except NotRunningException:
+    print "Debugger is not running\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_down():
   try:
     debugger.down()
+  except NotRunningException:
+    print "Debugger is not running\n"
   except:
-    connection_closed(sys.exc_info())
+    unknown_exception_handler()
 
 def debugger_quit():
   global debugger
-  debugger.quit()
+  try:
+    debugger.quit()
+  except NotRunningException:
+    print "Debugger is not running\n"
+  except:
+    unknown_exception_handler()
 
 mode = 0
 def debugger_resize():

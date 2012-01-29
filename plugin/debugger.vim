@@ -111,7 +111,10 @@
 "=============================================================================
 " }}}
 
-" Do not source this script when python is not compiled in.
+
+"=============================================================================
+" check that everything is OK
+"=============================================================================
 if !has("python")
     finish
 endif
@@ -127,30 +130,26 @@ else
   call confirm('debugger.vim: Unable to find debugger.py. Place it in either your home vim directory or in the Vim runtime directory.', 'OK')
 endif
 
+
+"=============================================================================
+" map debugging function keys
+"=============================================================================
 map <F1> :python debugger_resize()<cr>
 map <F2> :python debugger_command('step_into')<cr>
 map <F3> :python debugger_command('step_over')<cr>
 map <F4> :python debugger_command('step_out')<cr>
-
-map <Leader>dr :python debugger_resize()<cr>
-map <Leader>di :python debugger_command('step_into')<cr>
-map <Leader>do :python debugger_command('step_over')<cr>
-map <Leader>dt :python debugger_command('step_out')<cr>
-
-nnoremap ,e :python debugger_watch_input("eval")<cr>A
-
-map <F5> :python debugger_run()<cr>
-map <F6> :python debugger_quit()<cr>
-
-map <F7> :python debugger_command('step_into')<cr>
-map <F8> :python debugger_command('step_over')<cr>
-map <F9> :python debugger_command('step_out')<cr>
-
+map <F5> :call <SID>startDebugging()<cr>
+map <F6> :call <SID>stopDebugging()<cr>
 map <F11> :python debugger_context()<cr>
 map <F12> :python debugger_property()<cr>
 map <F11> :python debugger_watch_input("context_get")<cr>A<cr>
 map <F12> :python debugger_watch_input("property_get", '<cword>')<cr>A<cr>
+nnoremap ,e :python debugger_watch_input("eval")<cr>A
 
+
+"=============================================================================
+" Initialization
+"=============================================================================
 hi DbgCurrent term=reverse ctermfg=White ctermbg=Red gui=reverse
 hi DbgBreakPt term=reverse ctermfg=White ctermbg=Green gui=reverse
 
@@ -187,4 +186,35 @@ endif
 if !exists('g:debuggerFileMapping')
   let g:debuggerFileMapping = []
 endif
+if !exists('g:debuggerTimeout')
+    let g:debuggerTimeout = 10
+endif
+if !exists('g:debuggerDedicatedTab')
+    let g:debuggerDedicatedTab = 1
+endif
+if !exists('g:debuggerDebugMode')
+    let g:debuggerDebugMode = 0
+endif
+
+
+
+"=============================================================================
+" Debugging functions
+"=============================================================================
+
+function! s:startDebugging()
+        python debugger_run()
+endfunction
+
+function! s:stopDebugging()
+        python debugger_quit()
+        " if your code goes weird re-source your syntax file, or any other
+        " cleanups here
+        "source ~/.vim/plugin/torte.vim 
+endfunction
+
+"=============================================================================
+" Init Debugger python script
+"=============================================================================
+
 python debugger_init(1)
