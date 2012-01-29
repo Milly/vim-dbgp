@@ -1187,7 +1187,7 @@ def unknown_exception_handler(msg = 'Unknown Exception, Connection closed, stop 
     print msg, sys.exc_info()
 
 
-def debugger_init(debug = 0):
+def debugger_init():
   global debugger
 
   # get needed vim variables

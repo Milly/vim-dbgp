@@ -216,4 +216,4 @@ endfunction
 " Init Debugger python script
 "=============================================================================
 
-python debugger_init(1)
+python debugger_init()
