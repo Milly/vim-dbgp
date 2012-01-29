@@ -54,6 +54,15 @@ There are some variables that you can configure in Vim:
     Array with pairs of regular expressions to match and replacement strings, e,g:
     ``[['/var/www/[^/]+/(.*)', '/home/' . $USER . '/project/\\1']]``
 
+``g:debuggerTimeout`` [10]
+    TODO
+
+``g:debuggerDedicatedTab`` [1]
+    TODO
+
+``g:debuggerDebugMode`` [0]
+    TODO
+
 Usage
 ------
 
