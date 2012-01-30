@@ -420,7 +420,7 @@ class HelpWindow(VimWindow):
         '  <F4>   step out                 |                       \n' + \
         '  <F5>   run                      | [ Command Mode ]      \n' + \
         '  <F6>   quit debugging           | :Bp toggle breakpoint \n' + \
-        '                                  | :Up stack up          \n' + \
+        '  <F7>   run to                   | :Up stack up          \n' + \
         '  <F11>  get all context          | :Dn stack down        \n' + \
         '  <F12>  get property at cursor   |                       \n' + \
         '\n')
@@ -716,6 +716,7 @@ class BreakPoint:
   def clear(self):
     """ clear of breakpoint number """
     self.breakpt.clear()
+    self.rtbreakpt = None
     self.revmap.clear()
     self.maxbno = self.startbno
   def add(self, file, line, exp = ''):
@@ -776,6 +777,7 @@ class Debugger:
     self.curstack   = 0
     self.laststack  = 0
     self.bptsetlst  = {} 
+    self.rtbreakpt  = None
 
     self.status        = None
     self.max_children  = max_children
@@ -815,6 +817,7 @@ class Debugger:
     self.curstack  = 0
     self.laststack = 0
     self.bptsetlst = {} 
+    self.rtbreakpt = None
 
     self.protocol.close()
 
@@ -983,6 +986,9 @@ class Debugger:
     if res.firstChild.hasAttribute('status'):
       self.status = res.firstChild.getAttribute('status')
       return
+  def handle_response_breakpoint_remove(self, res):
+    if self.rtbreakpt != None:
+      del self.rtbreakpt
   def handle_response_breakpoint_set(self, res):
     """handle <response command=breakpoint_set> tag
     <responsponse command="breakpoint_set" id="110180001" transaction_id="1"/>"""
@@ -1105,9 +1111,13 @@ class Debugger:
       file = self._map_file(self.stacks[self.curstack]['file'])
       self.ui.set_srcview(file, self.stacks[self.curstack]['line'])
 
-  def mark(self, exp = ''):
+  def mark(self, exp = '', runto = False):
     (row, rol) = vim.current.window.cursor
     file = self._unmap_file(vim.current.buffer.name)
+
+    if ((runto == True) and not (self.protocol.isconnected())):
+      print 'Cannot advance when not connected'
+      return
 
     bno = self.breakpt.find(file, row)
     if bno != None:
@@ -1119,12 +1129,25 @@ class Debugger:
         self.recv()
     else:
       bno = self.breakpt.add(file, row, exp)
-      vim.command('sign place ' + str(bno) + ' name=breakpt line=' + str(row) + ' file=' + file)
+      if not runto:
+        vim.command('sign place ' + str(bno) + ' name=breakpt line=' + str(row) + ' file=' + file)
+        
       if self.protocol.isconnected():
         msgid = self.send_command('breakpoint_set', \
                                   '-t line -f ' + self.breakpt.getfile(bno) + ' -n ' + str(self.breakpt.getline(bno)), \
                                   self.breakpt.getexp(bno))
         self.bptsetlst[msgid] = bno
+        if runto:
+          self.rtbreakpt = bno
+        self.recv()
+
+  def clear_runto(self):
+    if ((self.rtbreakpt != None)):
+      id = self.breakpt.getid(self.rtbreakpt)
+      self.breakpt.remove(self.rtbreakpt)
+      self.rtbreakpt = None
+      if self.protocol.isconnected():
+        self.send_command('breakpoint_remove', '-d ' + str(id))
         self.recv()
 
   def watch_input(self, mode, arg = ''):
@@ -1248,6 +1271,7 @@ def debugger_command(msg, arg1 = '', arg2 = ''):
 
 def debugger_run():
   try:
+    debugger.clear_runto()
     debugger.run()
   except NotRunningException:
     print "Debugger is not running\n"
@@ -1285,6 +1309,13 @@ def debugger_property(name = ''):
 def debugger_mark(exp = ''):
   try:
     debugger.mark(exp)
+  except:
+    unknown_exception_handler()
+def debugger_run_to():
+  try:
+    debugger.clear_runto()
+    debugger.mark('', True)
+    debugger.run()
   except:
     unknown_exception_handler()
 

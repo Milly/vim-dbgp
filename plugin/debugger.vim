@@ -139,6 +139,7 @@ map <F3> :python debugger_command('step_over')<cr>
 map <F4> :python debugger_command('step_out')<cr>
 map <F5> :call <SID>startDebugging()<cr>
 map <F6> :call <SID>stopDebugging()<cr>
+map <F7> :python debugger_run_to()<cr>
 map <F11> :python debugger_context()<cr>
 map <F12> :python debugger_property()<cr>
 map <F11> :python debugger_watch_input("context_get")<cr>A<cr>
