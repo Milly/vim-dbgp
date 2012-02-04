@@ -59,6 +59,7 @@ import traceback
 import xml.dom.minidom
 import urllib
 import tempfile
+import binascii
 
 #######################################################################################################################
 #                                                                                                                     #
@@ -336,11 +337,11 @@ class WatchWindow(VimWindow):
       line = str(''.ljust(level*1) + line)
       encoding = node.getAttribute('encoding')
       if encoding == 'base64':
-        line += "'" + base64.decodestring(str(node.firstChild.data)) + "';\n"
+        line += "'" + fix_encode(base64.decodestring(str(node.firstChild.data))) + "';\n"
       elif encoding == '':
-        line += str(node.firstChild.data) + ';\n'
+        line += fix_encode(node.firstChild.data) + ';\n'
       else:
-        line += '(e:'+encoding+') ' + str(node.firstChild.data) + ';\n'
+        line += '(e:'+encoding+') ' + fix_encode(node.firstChild.data) + ';\n'
     else:
       if level == 0:
         line = ''.ljust(level*1) + str(line) + ';' + '\n'
@@ -353,11 +354,11 @@ class WatchWindow(VimWindow):
     return line
   def xml_on_element(self, node):
     if node.nodeName == 'property':
-      self.type = node.getAttribute('type')
+      self.type = fix_encode(node.getAttribute('type'))
 
-      name      = node.getAttribute('name')
-      fullname  = node.getAttribute('fullname')
-      classname = node.getAttribute('classname')
+      name      = fix_encode(node.getAttribute('name'))
+      fullname  = fix_encode(node.getAttribute('fullname'))
+      classname = fix_encode(node.getAttribute('classname'))
       if name == '':
         name = 'EVAL_RESULT'
       if fullname == '':
@@ -376,14 +377,14 @@ class WatchWindow(VimWindow):
 
   def xml_on_text(self, node):
     if self.type == 'string':
-      return "'" + str(node.data) + "'"
+      return "'" + fix_encode(node.data) + "'"
     else:
-      return str(node.data)
+      return fix_encode(node.data)
   def xml_on_cdata_section(self, node):
     if self.type == 'string':
-      return "'" + str(node.data) + "'"
+      return "'" + fix_encode(node.data) + "'"
     else:
-      return str(node.data)
+      return fix_encode(node.data)
   def on_create(self):
     self.write('<?')
     self.command('inoremap <buffer> <cr> <esc>:python debugger.watch_execute()<cr>')
@@ -1272,10 +1273,40 @@ def debugger_command(msg, arg1 = '', arg2 = ''):
   except:
     unknown_exception_handler()
 
+def get_encoding(winnr):
+  vim.command(str(winnr) + 'wincmd w')
+  fenc = vim.eval('&fileencoding')
+  return fenc if len(fenc) > 0 else vim.eval('&encoding')
+
+def fix_encode(val):
+  global src_encoding, watch_encoding
+  same_encode = src_encoding == watch_encoding
+  if isinstance(val, unicode):
+    hexdump = ''.join(['%x' % ord(s) for s in val])
+    str_val = binascii.a2b_hex(hexdump)
+    if same_encode:
+      return str_val
+    else:
+      s = unicode(str_val, src_encoding, 'replace')
+      w = s.encode(watch_encoding, 'replace')
+      return w
+  elif isinstance(val, str):
+    if same_encode:
+      return val
+    else:
+      s = unicode(val, src_encoding, 'replace')
+      w = s.encode(watch_encoding, 'replace')
+      return w
+  else:
+    return str(val)
+
 def debugger_run():
   try:
     debugger.clear_runto()
     debugger.run()
+    global src_encoding, watch_encoding
+    src_encoding = get_encoding(1) # get srcview window encoding
+    watch_encoding = get_encoding(2) # get watch window encoding
   except NotRunningException:
     print "Debugger is not running\n"
   except ConnectionTimeoutException:
