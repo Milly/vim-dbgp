@@ -59,7 +59,6 @@ import traceback
 import xml.dom.minidom
 import urllib
 import tempfile
-import binascii
 
 #######################################################################################################################
 #                                                                                                                     #
@@ -1279,30 +1278,22 @@ def get_encoding(winnr):
   return fenc if len(fenc) > 0 else vim.eval('&encoding')
 
 def fix_encode_initialize():
-  global src_encoding, watch_encoding
+  global src_encoding, watch_encoding, same_encoding
   cur_win_pos = vim.eval('bufwinnr("")')
   src_encoding = get_encoding(1) # get srcview window encoding
   watch_encoding = get_encoding(2) # get watch window encoding
+  same_encoding = src_encoding == watch_encoding
   if int(cur_win_pos) != -1:
     vim.command(cur_win_pos + 'wincmd w')
 
 def fix_encode(val):
-  global src_encoding, watch_encoding
-  same_encode = src_encoding == watch_encoding
-  if isinstance(val, unicode):
-    hexdump = ''.join(['%x' % ord(s) for s in val])
-    str_val = binascii.a2b_hex(hexdump)
-    if same_encode:
+  global src_encoding, watch_encoding, same_encoding
+  if isinstance(val, basestring):
+    str_val = ''.join([chr(ord(s)) for s in val]) if isinstance(val, unicode) else val
+    if same_encoding:
       return str_val
     else:
       s = unicode(str_val, src_encoding, 'replace')
-      w = s.encode(watch_encoding, 'replace')
-      return w
-  elif isinstance(val, str):
-    if same_encode:
-      return val
-    else:
-      s = unicode(val, src_encoding, 'replace')
       w = s.encode(watch_encoding, 'replace')
       return w
   else:
