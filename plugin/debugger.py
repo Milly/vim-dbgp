@@ -1278,6 +1278,14 @@ def get_encoding(winnr):
   fenc = vim.eval('&fileencoding')
   return fenc if len(fenc) > 0 else vim.eval('&encoding')
 
+def fix_encode_initialize():
+  global src_encoding, watch_encoding
+  cur_win_pos = vim.eval('bufwinnr("")')
+  src_encoding = get_encoding(1) # get srcview window encoding
+  watch_encoding = get_encoding(2) # get watch window encoding
+  if int(cur_win_pos) != -1:
+    vim.command(cur_win_pos + 'wincmd w')
+
 def fix_encode(val):
   global src_encoding, watch_encoding
   same_encode = src_encoding == watch_encoding
@@ -1304,9 +1312,7 @@ def debugger_run():
   try:
     debugger.clear_runto()
     debugger.run()
-    global src_encoding, watch_encoding
-    src_encoding = get_encoding(1) # get srcview window encoding
-    watch_encoding = get_encoding(2) # get watch window encoding
+    fix_encode_initialize()
   except NotRunningException:
     print "Debugger is not running\n"
   except ConnectionTimeoutException:
