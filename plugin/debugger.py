@@ -298,7 +298,7 @@ class StackWindow(VimWindow):
         fmark = '()'
       else:
         fmark = ''
-      return str('%-2s %-15s %s:%s' % (      \
+      return fix_encode('%-2s %-15s %s:%s' % (      \
           node.getAttribute('level'),        \
           node.getAttribute('where')+fmark,  \
           node.getAttribute('filename')[7:], \
