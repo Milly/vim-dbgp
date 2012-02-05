@@ -1289,13 +1289,18 @@ def fix_encode_initialize():
 def fix_encode(val):
   global src_encoding, watch_encoding, same_encoding
   if isinstance(val, basestring):
-    str_val = ''.join([chr(ord(s)) for s in val]) if isinstance(val, unicode) else val
-    if same_encoding:
-      return str_val
+    # val will contain byte sequence of str for some reason even if the unicode.
+    if len([c for c in val if not ord(c) in range(0, 256)]) == 0:
+      str_val = ''.join([chr(ord(s)) for s in val])
+      if same_encoding:
+        return str_val
+      else:
+        s = unicode(str_val, src_encoding, 'replace')
+        w = s.encode(watch_encoding, 'replace')
+        return w
     else:
-      s = unicode(str_val, src_encoding, 'replace')
-      w = s.encode(watch_encoding, 'replace')
-      return w
+      str_val = val.encode(watch_encoding, 'replace')
+      return str_val
   else:
     return str(val)
 
