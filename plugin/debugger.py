@@ -1274,14 +1274,17 @@ def debugger_command(msg, arg1 = '', arg2 = ''):
 
 def get_encoding(winnr):
   vim.command(str(winnr) + 'wincmd w')
+  enc = vim.eval('&encoding')
   fenc = vim.eval('&fileencoding')
-  return fenc if len(fenc) > 0 else vim.eval('&encoding')
+  if len(fenc) == 0:
+    fenc = enc
+  return (enc, fenc)
 
 def fix_encode_initialize():
   global src_encoding, watch_encoding, same_encoding
   cur_win_pos = vim.eval('bufwinnr("")')
-  src_encoding = get_encoding(1) # get srcview window encoding
-  watch_encoding = get_encoding(2) # get watch window encoding
+  src_encoding = get_encoding(1)[1] # get srcview window encoding
+  watch_encoding = get_encoding(2)[0] # get watch window encoding
   same_encoding = src_encoding == watch_encoding
   if int(cur_win_pos) != -1:
     vim.command(cur_win_pos + 'wincmd w')
