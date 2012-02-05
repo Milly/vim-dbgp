@@ -26,7 +26,7 @@ There are some variables that you can configure in Vim:
     The port that the plugin will use to receive the connections from the
     debugger
 
-``g:debuggerProxyPort`` [localhost]
+``g:debuggerProxyHost`` [localhost]
     Host where the proxy is
 
 ``g:debuggerProxyPort``
@@ -38,10 +38,7 @@ There are some variables that you can configure in Vim:
 ``g:debuggerMaxChildren`` [32]
     TODO
 
-``g:debuggerMaxData`` [32]
-    TODO
-
-``g:debuggerMaxChildren`` [1024]
+``g:debuggerMaxData`` [1024]
     TODO
 
 ``g:debuggerMaxDepth`` [1]
