@@ -400,16 +400,20 @@ class WatchWindow(VimWindow):
     line = self.buffer[-1]
     if line[0:17] == '/*{{{1*/ => exec:':
       print "exec does not supported by xdebug now."
-      return ('none', '')
-      #return ('exec', line[17:].strip(' '))
+      (cmd, expr) = ('none', '')
+      #(cmd, expr) = ('exec', line[17:].strip(' '))
     elif line[0:17] == '/*{{{1*/ => eval:':
-      return ('eval', line[17:].strip(' '))
+      (cmd, expr) = ('eval', line[17:].strip(' '))
     elif line[0:25] == '/*{{{1*/ => property_get:':
-      return ('property_get', line[25:].strip(' '))
+      (cmd, expr) = ('property_get', line[25:].strip(' '))
     elif line[0:24] == '/*{{{1*/ => context_get:':
-      return ('context_get', line[24:].strip(' '))
+      (cmd, expr) = ('context_get', line[24:].strip(' '))
     else:
-      return ('none', '')
+      (cmd, expr) = ('none', '')
+    if not same_encoding:
+      uexpr = unicode(expr, watch_encoding, 'replace')
+      expr = uexpr.encode(src_encoding, 'replace')
+    return (cmd, expr)
 
 class HelpWindow(VimWindow):
   def __init__(self, owner, name = 'HELP__WINDOW'):
