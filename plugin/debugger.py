@@ -1325,6 +1325,7 @@ def debugger_run():
 
 def debugger_watch_input(cmd, arg = ''):
   try:
+    fix_encode_initialize()
     if arg == '<cword>':
       arg = vim.eval('expand("<cword>")')
     debugger.watch_input(cmd, arg)
@@ -1335,6 +1336,7 @@ def debugger_watch_input(cmd, arg = ''):
 
 def debugger_context():
   try:
+    fix_encode_initialize()
     debugger.command('context_get')
   except NotRunningException:
     print "Debugger is not running\n"
@@ -1343,6 +1345,7 @@ def debugger_context():
 
 def debugger_property(name = ''):
   try:
+    fix_encode_initialize()
     debugger.property_get()
   except NotRunningException:
     print "Debugger is not running\n"
