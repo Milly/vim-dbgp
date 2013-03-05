@@ -26,7 +26,7 @@
 " Name Of File: debugger.vim, debugger.py
 "  Description: remote debugger interface to DBGp protocol
 "   Maintainer: Sam Ghods <sam <at> box.net>
-"  Last Change: June 18, 2007
+"  Last Change: 06 Mar 2013
 "          URL: http://www.vim.org/scripts/script.php?script_id=1929
 "      Version: 1.1.1
 "               Originally written by Seung Woo Shin <segv <at> sayclub.com>
@@ -133,18 +133,33 @@ endif
 "=============================================================================
 " map debugging function keys
 "=============================================================================
-map <F1> :python debugger_resize()<cr>
-map <F2> :python debugger_command('step_into')<cr>
-map <F3> :python debugger_command('step_over')<cr>
-map <F4> :python debugger_command('step_out')<cr>
-map <F5> :call <SID>startDebugging()<cr>
-map <F6> :call <SID>stopDebugging()<cr>
-map <F7> :python debugger_run_to()<cr>
-map <F11> :python debugger_context()<cr>
-map <F12> :python debugger_property()<cr>
-map <F11> :python debugger_watch_input("context_get")<cr>A<cr>
-map <F12> :python debugger_watch_input("property_get", '<cword>')<cr>A<cr>
-nnoremap ,e :python debugger_watch_input("eval")<cr>A
+map <Plug>(debugger_resize)       :python debugger_resize()<CR>
+map <Plug>(debugger_step_into)    :python debugger_command('step_into')<CR>
+map <Plug>(debugger_step_over)    :python debugger_command('step_over')<CR>
+map <Plug>(debugger_step_out)     :python debugger_command('step_out')<CR>
+map <Plug>(debugger_run)          :call <SID>startDebugging()<CR>
+map <Plug>(debugger_quit)         :call <SID>stopDebugging()<CR>
+map <Plug>(debugger_run_to)       :python debugger_run_to()<CR>
+map <Plug>(debugger_context)      :python debugger_context()<CR>
+map <Plug>(debugger_property)     :python debugger_property()<CR>
+map <Plug>(debugger_context_get)  :python debugger_watch_input("context_get")<CR>A<CR>
+map <Plug>(debugger_property_get) :python debugger_watch_input("property_get", '<cword>')<CR>A<CR>
+map <Plug>(debugger_eval)         :python debugger_watch_input("eval")<CR>A
+
+if !exists('g:debugger_no_default_key_mappings') || !g:debugger_no_default_key_mappings
+  nmap <F1>  <Plug>(debugger_resize)
+  nmap <F2>  <Plug>(debugger_step_into)
+  nmap <F3>  <Plug>(debugger_step_over)
+  nmap <F4>  <Plug>(debugger_step_out)
+  nmap <F5>  <Plug>(debugger_run)
+  nmap <F6>  <Plug>(debugger_quit)
+  nmap <F7>  <Plug>(debugger_run_to)
+  nmap <F8>  <Plug>(debugger_context)
+  nmap <F9>  <Plug>(debugger_property)
+  nmap <F11> <Plug>(debugger_context_get)
+  nmap <F12> <Plug>(debugger_property_get)
+  nmap <Leader>e <Plug>(debugger_eval)
+endif
 
 
 "=============================================================================
