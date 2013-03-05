@@ -33,20 +33,20 @@
 #    Hadi Zeftin <slack.dna <at> gmail.com>
 
 """
-	debugger.py -- DBGp client: a remote debugger interface to DBGp protocol
+    debugger.py -- DBGp client: a remote debugger interface to DBGp protocol
 
     Usage:
         Use with the debugger.vim vim plugin
 
     This debugger is designed to be used with debugger.vim,
-	a vim plugin which provides a full debugging environment
-	right inside vim.
+    a vim plugin which provides a full debugging environment
+    right inside vim.
 
-	CHECK DEBUGGER.VIM FOR THE FULL DOCUMENTATION.
+    CHECK DEBUGGER.VIM FOR THE FULL DOCUMENTATION.
 
     Example usage:
         Place inside <source vim directory>/plugin/ along with
-		debugger.py.
+        debugger.py.
 """
 
 import os
@@ -93,7 +93,7 @@ import tempfile
 #                          |  |    [m] remove()         |   |                                                         #
 #                          |  |    [m] list()           |   |                                                         #
 #                          |  +-------------------------+   |                             VIM                         #
-#                          |                                |                +--------------+-----+                   #                 
+#                          |                                |                +--------------+-----+                   #
 #  [m] method              |  +--[ class DebugUI ]------+   |                |              |     |  <----+           #
 #  [f] class               |  |    [m] debug_mode()     | ------------------ |              +-----+       |           #
 #                          |  |    [m] normal_mode()    |   |   controls     |  srv         |     |  <----+           #
@@ -105,7 +105,7 @@ import tempfile
 #                          |  +--[ class VimWindow ]----+   |                |              |     |  <----+           #
 #                          |  |    [m] create()         |   |                +--------------+-----+       |           #
 #                          |  |    [m] write()          |   |                                             |           #
-#                          |  |    [m] create()         | ------------------------------------------------+           #              
+#                          |  |    [m] create()         | ------------------------------------------------+           #
 #                          |  |    [m] create()         |   |    controls each debug window                           #
 #                          |  +-------------------------+   |     (except src view)                                   #
 #                          |                                |                                                         #
@@ -783,7 +783,7 @@ class Debugger:
     self.stacks     = []
     self.curstack   = 0
     self.laststack  = 0
-    self.bptsetlst  = {} 
+    self.bptsetlst  = {}
     self.rtbreakpt  = None
 
     self.status        = None
@@ -823,7 +823,7 @@ class Debugger:
     self.stacks    = []
     self.curstack  = 0
     self.laststack = 0
-    self.bptsetlst = {} 
+    self.bptsetlst = {}
     self.rtbreakpt = None
 
     self.protocol.close()
@@ -914,7 +914,7 @@ class Debugger:
         Copyright (c) 2002-2004 by Derick Rethans
       </copyright>
     </init>"""
-   
+
     file = res.firstChild.getAttribute('fileuri')[7:]
     self.ui.set_srcview(self._map_file(file), 1)
 
@@ -1138,7 +1138,7 @@ class Debugger:
       bno = self.breakpt.add(file, row, exp)
       if not runto:
         vim.command('sign place ' + str(bno) + ' name=breakpt line=' + str(row) + ' file=' + file)
-        
+
       if self.protocol.isconnected():
         msgid = self.send_command('breakpoint_set', \
                                   '-t line -f ' + self.breakpt.getfile(bno) + ' -n ' + str(self.breakpt.getline(bno)), \
@@ -1169,7 +1169,7 @@ class Debugger:
       name = vim.eval('expand("<cword>")')
     self.ui.watchwin.write('--> property_get: '+name)
     self.command('property_get', '-n '+name)
-    
+
   def watch_execute(self):
     """ execute command in watch window """
     if self.running == 0:
@@ -1206,7 +1206,7 @@ class ConnectionTimeoutException(DebuggerException):
 
 #################################################################################################################
 #
-# Try - Catch Wrapper 
+# Try - Catch Wrapper
 #
 #################################################################################################################
 
@@ -1357,6 +1357,7 @@ def debugger_mark(exp = ''):
     debugger.mark(exp)
   except:
     unknown_exception_handler()
+
 def debugger_run_to():
   try:
     debugger.clear_runto()

@@ -3,26 +3,26 @@
 " Script Info and Documentation  {{{
 "=============================================================================
 "    Copyright: Copyright (C) 2007 Sam Ghods
-"      License:	The MIT License
-"				
-"				Permission is hereby granted, free of charge, to any person obtaining
-"				a copy of this software and associated documentation files
-"				(the "Software"), to deal in the Software without restriction,
-"				including without limitation the rights to use, copy, modify,
-"				merge, publish, distribute, sublicense, and/or sell copies of the
-"				Software, and to permit persons to whom the Software is furnished
-"				to do so, subject to the following conditions:
-"				
-"				The above copyright notice and this permission notice shall be included
-"				in all copies or substantial portions of the Software.
-"				
-"				THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-"				OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-"				MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-"				IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-"				CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-"				TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-"				SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"      License: The MIT License
+"
+"               Permission is hereby granted, free of charge, to any person obtaining
+"               a copy of this software and associated documentation files
+"               (the "Software"), to deal in the Software without restriction,
+"               including without limitation the rights to use, copy, modify,
+"               merge, publish, distribute, sublicense, and/or sell copies of the
+"               Software, and to permit persons to whom the Software is furnished
+"               to do so, subject to the following conditions:
+"
+"               The above copyright notice and this permission notice shall be included
+"               in all copies or substantial portions of the Software.
+"
+"               THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+"               OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+"               MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+"               IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+"               CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+"               TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+"               SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 " Name Of File: debugger.vim, debugger.py
 "  Description: remote debugger interface to DBGp protocol
 "   Maintainer: Sam Ghods <sam <at> box.net>
@@ -31,7 +31,7 @@
 "      Version: 1.1.1
 "               Originally written by Seung Woo Shin <segv <at> sayclub.com>
 "               The original script is located at:
-"				http://www.vim.org/scripts/script.php?script_id=1152
+"               http://www.vim.org/scripts/script.php?script_id=1152
 "        Usage: N.B.: For a complete tutorial on how to setup this script,
 "               please visit:
 "               http://tech.blog.box.net/2007/06/20/how-to-debug-php-with-vim-and-xdebug-on-linux/
@@ -39,7 +39,7 @@
 "
 "               This file should reside in the plugins directory along
 "               with debugger.py and be automatically sourced.
-"               
+"
 "               By default, the script expects the debugging engine to connect
 "               on port 9000. You can change this with the g:debuggerPort
 "               variable by putting the following line your vimrc:
@@ -91,22 +91,22 @@
 "                     o Added support for minibufexpl.vim.
 "                     o License added.
 "               1.0   o Initial release on December 7, 2004
-"      
-" Known Issues: The code is designed for the DBGp protocol, but it has only been
-" 				tested with XDebug 2.0RC4. If anyone would like to contribute patches
-" 				to get it working with other DBGp software, I would be happy
-" 				to implement them.
 "
-" 				Sometimes things go a little crazy... breakpoints don't show
-" 				up, too many windows are created / not enough are closed, and
-" 				so on... if you can actually find a set of solidly
-" 				reproducible steps that lead to a bug, please do e-mail <sam
-" 				<at> box.net> and I will take a look.
-" 
+" Known Issues: The code is designed for the DBGp protocol, but it has only been
+"               tested with XDebug 2.0RC4. If anyone would like to contribute patches
+"               to get it working with other DBGp software, I would be happy
+"               to implement them.
+"
+"               Sometimes things go a little crazy... breakpoints don't show
+"               up, too many windows are created / not enough are closed, and
+"               so on... if you can actually find a set of solidly
+"               reproducible steps that lead to a bug, please do e-mail <sam
+"               <at> box.net> and I will take a look.
+"
 "         Todo: Compatibility for other DBGp engines.
 "
-"         		Add a status line/window which constantly shows what the current
-"         		status of the debugger is. (starting, break, stopped, etc.)
+"               Add a status line/window which constantly shows what the current
+"               status of the debugger is. (starting, break, stopped, etc.)
 "
 "=============================================================================
 " }}}
@@ -116,7 +116,7 @@
 " check that everything is OK
 "=============================================================================
 if !has("python")
-    finish
+  finish
 endif
 
 " Load debugger.py either from the runtime directory (usually
@@ -161,16 +161,16 @@ sign define breakpt text=B>  texthl=DbgBreakPt linehl=DbgBreakPt
 
 if !exists('g:debuggerPort')
   let g:debuggerPort = 9000
-endif 
+endif
 if !exists('g:debuggerProxyHost')
   let g:debuggerProxyHost = 'localhost'
 endif
 if !exists('g:debuggerProxyPort')
   let g:debuggerProxyPort = 0
-endif 
+endif
 if !exists('g:debuggerProxyKey')
   let g:debuggerProxyKey = ''
-endif 
+endif
 if !exists('g:debuggerMaxChildren')
   let g:debuggerMaxChildren = 32
 endif
@@ -187,13 +187,13 @@ if !exists('g:debuggerFileMapping')
   let g:debuggerFileMapping = []
 endif
 if !exists('g:debuggerTimeout')
-    let g:debuggerTimeout = 10
+  let g:debuggerTimeout = 10
 endif
 if !exists('g:debuggerDedicatedTab')
-    let g:debuggerDedicatedTab = 1
+  let g:debuggerDedicatedTab = 1
 endif
 if !exists('g:debuggerDebugMode')
-    let g:debuggerDebugMode = 0
+  let g:debuggerDebugMode = 0
 endif
 
 
@@ -203,14 +203,14 @@ endif
 "=============================================================================
 
 function! s:startDebugging()
-        python debugger_run()
+  python debugger_run()
 endfunction
 
 function! s:stopDebugging()
-        python debugger_quit()
-        " if your code goes weird re-source your syntax file, or any other
-        " cleanups here
-        "source ~/.vim/plugin/torte.vim 
+  python debugger_quit()
+  " if your code goes weird re-source your syntax file, or any other
+  " cleanups here
+  "source ~/.vim/plugin/torte.vim
 endfunction
 
 "=============================================================================
