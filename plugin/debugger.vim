@@ -133,32 +133,42 @@ endif
 "=============================================================================
 " map debugging function keys
 "=============================================================================
-map <Plug>(debugger_resize)       :python debugger_resize()<CR>
-map <Plug>(debugger_step_into)    :python debugger_command('step_into')<CR>
-map <Plug>(debugger_step_over)    :python debugger_command('step_over')<CR>
-map <Plug>(debugger_step_out)     :python debugger_command('step_out')<CR>
-map <Plug>(debugger_run)          :call <SID>startDebugging()<CR>
-map <Plug>(debugger_quit)         :call <SID>stopDebugging()<CR>
-map <Plug>(debugger_run_to)       :python debugger_run_to()<CR>
-map <Plug>(debugger_context)      :python debugger_context()<CR>
-map <Plug>(debugger_property)     :python debugger_property()<CR>
-map <Plug>(debugger_context_get)  :python debugger_watch_input("context_get")<CR>A<CR>
-map <Plug>(debugger_property_get) :python debugger_watch_input("property_get", '<cword>')<CR>A<CR>
-map <Plug>(debugger_eval)         :python debugger_watch_input("eval")<CR>A
+map <silent> <Plug>(debugger_resize)       :<C-U>python debugger_resize()<CR>
+map <silent> <Plug>(debugger_step_into)    :<C-U>python debugger_command('step_into')<CR>
+map <silent> <Plug>(debugger_step_over)    :<C-U>python debugger_command('step_over')<CR>
+map <silent> <Plug>(debugger_step_out)     :<C-U>python debugger_command('step_out')<CR>
+map <silent> <Plug>(debugger_run)          :<C-U>call <SID>startDebugging()<CR>
+map <silent> <Plug>(debugger_quit)         :<C-U>call <SID>stopDebugging()<CR>
+map <silent> <Plug>(debugger_run_to)       :<C-U>python debugger_run_to()<CR>
+map <silent> <Plug>(debugger_toggle_mark)  :<C-U>python debugger_mark()<CR>
+map <silent> <Plug>(debugger_stack_up)     :<C-U>python debugger_up()<CR>
+map <silent> <Plug>(debugger_stack_down)   :<C-U>python debugger_down()<CR>
+map <silent> <Plug>(debugger_context_get)  :<C-U>python debugger_watch_input("context_get")<CR>A<CR>
+map <silent> <Plug>(debugger_property_get) :<C-U>python debugger_watch_input("property_get", '<cword>')<CR>A<CR>
+map <silent> <Plug>(debugger_eval)         :<C-U>python debugger_watch_input("eval")<CR>A
+
+" default key mappings
+let s:default_key_mappings = [
+      \ ['<F1>',      '<Plug>(debugger_resize)'],
+      \ ['<F2>',      '<Plug>(debugger_step_into)'],
+      \ ['<F3>',      '<Plug>(debugger_step_over)'],
+      \ ['<F4>',      '<Plug>(debugger_step_out)'],
+      \ ['<F5>',      '<Plug>(debugger_run)'],
+      \ ['<F6>',      '<Plug>(debugger_quit)'],
+      \ ['<F7>',      '<Plug>(debugger_run_to)'],
+      \ ['<F8>',      '<Plug>(debugger_toggle_mark)'],
+      \ ['<F9>',      '<Plug>(debugger_stack_up)'],
+      \ ['<F10>',     '<Plug>(debugger_stack_down)'],
+      \ ['<F11>',     '<Plug>(debugger_context_get)'],
+      \ ['<F12>',     '<Plug>(debugger_property_get)'],
+      \ ['<Leader>e', '<Plug>(debugger_eval)'],
+      \ ]
 
 if !exists('g:debugger_no_default_key_mappings') || !g:debugger_no_default_key_mappings
-  nmap <F1>  <Plug>(debugger_resize)
-  nmap <F2>  <Plug>(debugger_step_into)
-  nmap <F3>  <Plug>(debugger_step_over)
-  nmap <F4>  <Plug>(debugger_step_out)
-  nmap <F5>  <Plug>(debugger_run)
-  nmap <F6>  <Plug>(debugger_quit)
-  nmap <F7>  <Plug>(debugger_run_to)
-  nmap <F8>  <Plug>(debugger_context)
-  nmap <F9>  <Plug>(debugger_property)
-  nmap <F11> <Plug>(debugger_context_get)
-  nmap <F12> <Plug>(debugger_property_get)
-  nmap <Leader>e <Plug>(debugger_eval)
+  for [s:key, s:cmd] in s:default_key_mappings
+    execute 'map' s:key s:cmd
+  endfor
+  unlet s:key s:cmd
 endif
 
 
@@ -232,7 +242,36 @@ function! s:stopDebugging()
 endfunction
 
 "=============================================================================
+" Help functions
+"=============================================================================
+
+function! s:getDebuggerKeyMappings()
+  redir => list | execute 'silent! map' | redir END
+  let maps = map( split(list, '\n'),
+        \ 'matchlist(v:val,''^.\s\+\(\S\+\)\s\+\%(\*\s\+\)\?\(\S\+\)'')[1:2]')
+  let ret = {}
+  for [key, cmd] in maps
+    let ret[cmd] = key
+  endfor
+  return ret
+endfunction
+
+function! s:makeHelp()
+  let file = get(split(globpath(&rtp, 'doc/dbgp_cheat.txt'), '\n'), 0, '')
+  if !filereadable(file) | return [] | endif
+  let text = join(readfile(file), "\n")
+  let maps = s:getDebuggerKeyMappings()
+  for [key, cmd] in s:default_key_mappings
+    let pat = '\s\zs' . escape(key, '[].\') . '\s\+'
+    let sub = has_key(maps, cmd) ? escape(maps[cmd], '&') : ''
+    let text = substitute(text, pat, '\=printf("%-".len(submatch(0))."s",sub)', '')
+  endfor
+  return split(text, "\n")
+endfunction
+
+"=============================================================================
 " Init Debugger python script
 "=============================================================================
 
-python debugger_init()
+let s:SID = maparg('<Plug>(debugger_run)', '', 0, 1)['sid']
+execute 'python debugger_init(' s:SID ')'

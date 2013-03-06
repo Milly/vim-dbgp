@@ -419,19 +419,12 @@ class HelpWindow(VimWindow):
   def __init__(self, owner, name = 'HELP__WINDOW'):
     VimWindow.__init__(self, owner, name)
   def on_create(self):
-    self.write(                                                          \
-        '[ Function Keys ]                 |                       \n' + \
-        '  <F1>   resize                   | [ Normal Mode ]       \n' + \
-        '  <F2>   step into                |   ,e  eval            \n' + \
-        '  <F3>   step over                |                       \n' + \
-        '  <F4>   step out                 |                       \n' + \
-        '  <F5>   run                      | [ Command Mode ]      \n' + \
-        '  <F6>   quit debugging           | :Bp toggle breakpoint \n' + \
-        '  <F7>   run to                   | :Up stack up          \n' + \
-        '  <F11>  get all context          | :Dn stack down        \n' + \
-        '  <F12>  get property at cursor   |                       \n' + \
-        '\n')
-    self.command('1')
+    self.command('call append(1, <SNR>'+str(debugger.SID)+'_makeHelp())')
+    self.command('setlocal tw=78 ts=8 ft=help norl noet')
+    self.command('setlocal nonu nocul nocuc nowrap')
+    self.command('exec "setlocal wfh wh=".(line("$")-1)')
+    self.command('exec "normal! ".(line("$")-1)."\<C-W>_"')
+    self.command('1d _')
 
 class DebugUI:
   """ DEBUGUI class """
@@ -1217,7 +1210,7 @@ def unknown_exception_handler(msg = 'Unknown Exception, Connection closed, stop 
     print msg, sys.exc_info()
 
 
-def debugger_init():
+def debugger_init(sid):
   global debugger
 
   # get needed vim variables
@@ -1260,6 +1253,7 @@ def debugger_init():
 
   debugger = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug,
     proxy_host, proxy_port, proxy_key, timeout, dedicatedtab)
+  debugger.SID = sid
 
 def connection_closed(exc_info):
   debugger.ui.tracewin.write(exc_info)
