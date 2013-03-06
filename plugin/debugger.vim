@@ -168,9 +168,12 @@ endif
 hi DbgCurrent term=reverse ctermfg=White ctermbg=Red gui=reverse
 hi DbgBreakPt term=reverse ctermfg=White ctermbg=Green gui=reverse
 
+command! -nargs=0 DebuggerRun  call <SID>startDebugging()
+command! -nargs=0 DebuggerQuit call <SID>stopDebugging()
 command! -nargs=? Bp python debugger_mark('<args>')
 command! -nargs=0 Up python debugger_up()
 command! -nargs=0 Dn python debugger_down()
+
 sign define current text=->  texthl=DbgCurrent linehl=DbgCurrent
 sign define breakpt text=B>  texthl=DbgBreakPt linehl=DbgBreakPt
 
