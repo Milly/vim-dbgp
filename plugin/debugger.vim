@@ -26,7 +26,7 @@
 " Name Of File: debugger.vim, debugger.py
 "  Description: remote debugger interface to DBGp protocol
 "   Maintainer: Sam Ghods <sam <at> box.net>
-"  Last Change: 06 Mar 2013
+"  Last Change: 08 Mar 2013
 "          URL: http://www.vim.org/scripts/script.php?script_id=1929
 "      Version: 1.1.1
 "               Originally written by Seung Woo Shin <segv <at> sayclub.com>
@@ -222,6 +222,9 @@ if !exists('g:debuggerDedicatedTab')
 endif
 if !exists('g:debuggerDebugMode')
   let g:debuggerDebugMode = 0
+endif
+if !exists('g:debuggerShowCenter')
+  let g:debuggerShowCenter = 1
 endif
 
 

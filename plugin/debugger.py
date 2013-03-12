@@ -428,7 +428,7 @@ class HelpWindow(VimWindow):
 
 class DebugUI:
   """ DEBUGUI class """
-  def __init__(self, debugger, dedicatedtab, minibufexpl = 0):
+  def __init__(self, debugger, dedicatedtab, minibufexpl = 0, show_center = 1):
     """ initialize object """
     self.debugger = debugger
     self.watchwin = WatchWindow(self)
@@ -448,6 +448,7 @@ class DebugUI:
     self.debugtab = 0
     self.usetab = 0
     self.usesessiontab = 0
+    self.show_center = show_center
 
   def switch_working_tab(self):
     if self.usetab == 1 and vim.eval('tabpagenr()') != self.debugtab:
@@ -581,7 +582,8 @@ class DebugUI:
     vim.command('sign unplace ' + self.cursign)
 
     vim.command('sign jump ' + nextsign + ' file='+file)
-    #vim.command('normal z.')
+    if self.show_center:
+        vim.command('normal z.')
 
     self.line    = line
     self.cursign = nextsign
@@ -759,7 +761,7 @@ class Debugger:
   #################################################################################################################
   # Internal functions
   #
-  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_host='localhost', proxy_port=None, proxy_key=None, timeout = 5, dedicatedtab = 1):
+  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_host='localhost', proxy_port=None, proxy_key=None, timeout = 5, dedicatedtab = 1, show_center = 1):
     """ initialize Debugger """
     socket.setdefaulttimeout(timeout)
     self.port       = port
@@ -786,7 +788,7 @@ class Debugger:
 
     self.protocol   = DbgProtocol(self.port, self.proxy_host, self.proxy_port, self.proxy_key, timeout)
 
-    self.ui         = DebugUI(self, dedicatedtab, minibufexpl)
+    self.ui         = DebugUI(self, dedicatedtab, minibufexpl, show_center)
     self.breakpt    = BreakPoint()
 
     self.file_mapping = list(vim.eval('debuggerFileMapping'))
@@ -1251,8 +1253,10 @@ def debugger_init(sid):
 
   debug = int(vim.eval('debuggerDebugMode'))
 
+  show_center = int(vim.eval('debuggerShowCenter'))
+
   debugger = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug,
-    proxy_host, proxy_port, proxy_key, timeout, dedicatedtab)
+    proxy_host, proxy_port, proxy_key, timeout, dedicatedtab, show_center)
   debugger.SID = sid
 
 def connection_closed(exc_info):
